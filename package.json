@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "fetch-scrcpy-server 3.3.3 && node scripts/copy-scrcpy-server.mjs"
   },
   "dependencies": {
     "@yume-chan/adb": "^2.6.4",

@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scrcpy server binary (downloaded by postinstall)
+/public/scrcpy-server.bin
