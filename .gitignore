@@ -42,3 +42,7 @@ next-env.d.ts
 
 # scrcpy server binary (downloaded by postinstall)
 /public/scrcpy-server.bin
+
+# Android shell app build output and local signing key (cafe.apk itself is committed)
+/android-app/build/
+/android-app/debug.keystore

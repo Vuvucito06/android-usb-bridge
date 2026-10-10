@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,8 +13,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Android USB Bridge",
-  description: "Connect an Android phone over USB from the browser",
+  title: "Bean & Brew",
+  description: "Order coffee from your phone",
+};
+
+// App-like on phones: no pinch zoom, content under the status bar, brand colour.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#2b1b17",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

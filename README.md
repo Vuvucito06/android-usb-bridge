@@ -1,14 +1,24 @@
-# Android USB Bridge
+# Bean & Brew: your website as an Android app over USB
 
-A Next.js web app that connects to an Android phone over a USB cable, straight from the browser. Nothing needs to be installed on the phone.
+A small café website built with Next.js (menu, cart, ordering) that opens on an Android phone **like a native app** as soon as you plug the phone into your computer with a USB cable.
 
-Once connected you can:
+- Runs on your computer (**macOS or Windows**). The phone shows it full screen in an app called **Bean & Brew**, with no browser bar. It works like Electron, but on the phone.
+- Works through the **USB cable only**. No Wi-Fi, no hosting, no Play Store.
+- Code changes show up on the phone live while you develop.
+- Orders placed on the phone appear in the terminal on your computer.
 
-- see the phone's **model, Android version and serial number**
-- run **`adb shell` commands** from a text box
-- **mirror the phone's screen** and control it with the mouse: tap, swipe, Back, Home, Recents
+```
+ Computer (Mac / Windows)                         Android phone
+┌──────────────────────────────┐   USB cable   ┌─────────────────────────────┐
+│ Next.js website :3000        │◀─────────────▶│ "Bean & Brew" app           │
+│ npm run phone                │  ADB tunnel   │ full-screen WebView showing │
+│  • finds the phone           │               │ http://localhost:3000       │
+│  • forwards localhost:3000   │               │                             │
+│  • installs + opens the app  │               │                             │
+└──────────────────────────────┘               └─────────────────────────────┘
+```
 
-It works from **macOS → Android** and **Windows → Android** in Chrome, Edge, Opera or Brave. A **USB-A to USB-C cable** works fine, as long as it is a *data* cable and not a charge-only one.
+There is also a bonus tool at **`/bridge`** that mirrors and controls the phone's screen in Chrome. See [Bonus: screen mirroring](#bonus-screen-mirroring-in-the-browser).
 
 ---
 
@@ -18,11 +28,13 @@ It works from **macOS → Android** and **Windows → Android** in Chrome, Edge,
 2. [Install on macOS](#install-on-macos)
 3. [Install on Windows](#install-on-windows)
 4. [Prepare your Android phone (once)](#prepare-your-android-phone-once)
-5. [Connect and use the app](#connect-and-use-the-app)
-6. [Troubleshooting](#troubleshooting)
-7. [Deploying online](#deploying-online)
-8. [How it works](#how-it-works)
-9. [Limitations](#limitations)
+5. [Open the website on the phone](#open-the-website-on-the-phone)
+6. [Change the website](#change-the-website)
+7. [Change the Android app (name, icon, colours)](#change-the-android-app-name-icon-colours)
+8. [Bonus: screen mirroring in the browser](#bonus-screen-mirroring-in-the-browser)
+9. [Troubleshooting](#troubleshooting)
+10. [How it works](#how-it-works)
+11. [Limitations](#limitations)
 
 ---
 
@@ -30,12 +42,13 @@ It works from **macOS → Android** and **Windows → Android** in Chrome, Edge,
 
 | | |
 | --- | --- |
-| Computer | macOS or Windows 10/11 |
-| Browser | **Google Chrome** or **Microsoft Edge**. Opera and Brave also work. **Safari and Firefox do not.** |
+| Computer | macOS, or Windows 10/11 |
 | Node.js | Version **20.9 or newer**. The steps below show how to install it. |
-| Phone | Any Android phone with **USB debugging** turned on |
-| Cable | USB-A → USB-C (or USB-C → USB-C) that carries **data** |
-| Internet | Needed during `npm install`, which downloads the packages and the screen-mirroring server |
+| Phone | Any Android phone running **Android 8.0 or newer**, with **USB debugging** turned on |
+| Cable | USB-A → USB-C (or USB-C → USB-C) that carries **data**, not a charge-only cable |
+| Internet | Only needed during `npm install` |
+
+You **don't** need Android Studio, the Android SDK or `adb`. Everything comes with `npm install`.
 
 ---
 
@@ -54,40 +67,34 @@ Pick **one** of these options.
 1. Go to <https://nodejs.org>.
 2. Download the **LTS** version for macOS (the `.pkg` file).
 3. Open the downloaded file and click **Continue → Agree → Install**. Enter your Mac password when asked.
-4. **Close Terminal and open it again** so it picks up Node.js.
+4. **Close Terminal and open it again.**
 
-**Option B, Homebrew (if you already use it):**
+**Option B, Homebrew:**
 
 ```bash
 brew install node
 ```
 
-Then check that it worked:
+Check that it worked:
 
 ```bash
 node -v
 npm -v
 ```
 
-`node -v` must print **v20.9.0 or higher**, for example `v22.11.0`.
+`node -v` must print **v20.9.0 or higher**.
 
 ### Step 3: Install Git
-
-Check whether Git is already installed:
 
 ```bash
 git --version
 ```
 
-If macOS shows a pop-up asking to install the **Command Line Developer Tools**, click **Install**, wait for it to finish, then run `git --version` again.
+If macOS shows a pop-up about **Command Line Developer Tools**, click **Install**, wait, then run `git --version` again.
 
-> No Git? You can skip it. On the GitHub page, click **Code → Download ZIP** and double-click the ZIP to unpack it.
+> No Git? On the GitHub page click **Code → Download ZIP** and double-click the ZIP to unpack it.
 
-### Step 4: Install Google Chrome
-
-If you don't have it yet, download it from <https://www.google.com/chrome/> and drag it into **Applications**. Microsoft Edge works too. **Safari will not work.**
-
-### Step 5: Download the project
+### Step 4: Download the project
 
 ```bash
 cd ~/Desktop
@@ -95,31 +102,17 @@ git clone https://github.com/Vuvucito06/android-usb-bridge.git
 cd android-usb-bridge
 ```
 
-If you used **Download ZIP** instead, run `cd ~/Downloads/android-usb-bridge-main`, or wherever you unpacked it.
+If you used **Download ZIP**, `cd` into the unpacked folder instead.
 
-### Step 6: Install the dependencies
+### Step 5: Install the dependencies
 
 ```bash
 npm install
 ```
 
-This takes a minute. At the end you should see a line like:
+This takes a minute or two.
 
-```
-Copied scrcpy server to .../public/scrcpy-server.bin
-```
-
-### Step 7: Start the app
-
-```bash
-npm run dev
-```
-
-Wait until you see `Ready`, then open **<http://localhost:3000>** in **Chrome**.
-
-> Keep the Terminal window open while you use the app. Press **Ctrl + C** in it to stop the app.
-
-### Step 8: Drivers
+### Step 6: Drivers
 
 **None are needed on macOS.** Continue with [Prepare your Android phone](#prepare-your-android-phone-once).
 
@@ -131,41 +124,37 @@ Wait until you see `Ready`, then open **<http://localhost:3000>** in **Chrome**.
 
 1. Go to <https://nodejs.org>.
 2. Download the **LTS** version for Windows (the `.msi` file).
-3. Run the installer. Click **Next** through the screens and keep the default options. **Add to PATH** must stay selected; it is by default.
-4. You can leave the **"Automatically install the necessary tools"** checkbox **unticked**; it isn't needed.
+3. Run it and click **Next** through the screens, keeping the defaults. **Add to PATH** must stay selected.
+4. Leave **"Automatically install the necessary tools"** unticked; it isn't needed.
 5. Click **Install**, then **Finish**.
 
 ### Step 2: Install Git
 
-1. Go to <https://git-scm.com/download/win> and download **Git for Windows**.
-2. Run the installer and click **Next** through all screens. The default options are fine.
+1. Download **Git for Windows** from <https://git-scm.com/download/win>.
+2. Run the installer and click **Next** through all screens. The defaults are fine.
 
-> No Git? You can skip it. On the GitHub page, click **Code → Download ZIP**, then right-click the ZIP and choose **Extract All**.
+> No Git? On the GitHub page click **Code → Download ZIP**, then right-click the ZIP → **Extract All**.
 
-### Step 3: Install Google Chrome
-
-Microsoft Edge is already on Windows and works. If you prefer Chrome, download it from <https://www.google.com/chrome/>.
-
-### Step 4: Open a terminal
+### Step 3: Open a terminal
 
 Press the **Windows key**, type **cmd**, and press **Enter** to open **Command Prompt**.
 
-> Using **PowerShell** instead? If `npm` fails with *"running scripts is disabled on this system"*, either use Command Prompt or run this once in PowerShell:
+> Using **PowerShell** instead? If `npm` fails with *"running scripts is disabled on this system"*, use Command Prompt, or run this once in PowerShell:
 >
 > ```powershell
 > Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 > ```
 
-Check that Node.js is installed:
+Check Node.js:
 
 ```bat
 node -v
 npm -v
 ```
 
-`node -v` must print **v20.9.0 or higher**. If you see *"'node' is not recognized"*, close the terminal, open a new one, and try again. Restart Windows if it still fails.
+`node -v` must print **v20.9.0 or higher**. If you see *"'node' is not recognized"*, open a new terminal, and restart Windows if it still fails.
 
-### Step 5: Download the project
+### Step 4: Download the project
 
 ```bat
 cd %USERPROFILE%\Desktop
@@ -173,103 +162,165 @@ git clone https://github.com/Vuvucito06/android-usb-bridge.git
 cd android-usb-bridge
 ```
 
-If you used **Download ZIP** instead, `cd` into the extracted folder, for example `cd %USERPROFILE%\Downloads\android-usb-bridge-main\android-usb-bridge-main`.
+If you used **Download ZIP**, `cd` into the extracted folder instead.
 
-### Step 6: Install the dependencies
+### Step 5: Install the dependencies
 
 ```bat
 npm install
 ```
 
-At the end you should see a line like:
+### Step 6: USB driver (only if the phone isn't found)
 
-```
-Copied scrcpy server to ...\public\scrcpy-server.bin
-```
+Programs on Windows can only talk to the phone if its **ADB interface uses the WinUSB driver**. Most recent phones get it automatically, so **skip this step at first**: do [Prepare your Android phone](#prepare-your-android-phone-once) and try `npm run phone`.
 
-### Step 7: Start the app
-
-```bat
-npm run dev
-```
-
-Wait until you see `Ready`, then open **<http://localhost:3000>** in **Chrome** or **Edge**.
-
-> Keep the terminal open while you use the app. Press **Ctrl + C** in it to stop the app. Answer `Y` if it asks *"Terminate batch job?"*.
-
-### Step 8: USB driver (only if the phone doesn't appear)
-
-Chrome and Edge on Windows can only talk to the phone if its **ADB interface uses the WinUSB driver**. Most recent phones get it automatically, so **first skip this step**: do [Prepare your Android phone](#prepare-your-android-phone-once) and try to connect.
-
-Come back here **only if** the phone doesn't show up in the browser's device list, or you get **"Access denied"**. This happens most often on Samsung phones and on PCs with an OEM driver installed.
+Come back here **only if** the terminal keeps saying *"Waiting for an Android phone…"* while the phone is plugged in, or shows *"Can't open the phone over USB"*. This is most common with Samsung phones and PCs that have an OEM driver installed.
 
 **Install the Google USB Driver:**
 
-1. Download the driver from <https://developer.android.com/studio/run/win-usb>. Accept the license and download the ZIP.
+1. Download it from <https://developer.android.com/studio/run/win-usb>. Accept the license and download the ZIP.
 2. Right-click the ZIP → **Extract All** → **Extract**. You get a folder named `usb_driver`.
 3. Plug in the phone, unlock it, and make sure **USB debugging** is on.
 4. Right-click the **Start** button → **Device Manager**.
-5. Find your phone. It's usually under **Other devices**, where it may show as **ADB Interface** with a yellow ⚠ icon, or under **Portable Devices** or **Universal Serial Bus devices**.
+5. Find your phone. It's usually under **Other devices**, where it may show as **ADB Interface** with a yellow ⚠, or under **Portable Devices** or **Universal Serial Bus devices**.
 6. Right-click it → **Update driver** → **Browse my computer for drivers**.
-7. Click **Browse**, select the extracted **`usb_driver`** folder, and click **Next**.
-8. If Windows says *"The best drivers for your device are already installed"*, do this instead:
+7. Click **Browse**, pick the **`usb_driver`** folder, and click **Next**.
+8. If Windows says *"The best drivers for your device are already installed"*:
    1. **Update driver** → **Browse my computer for drivers** → **Let me pick from a list of available drivers on my computer**.
-   2. Click **Have Disk… → Browse**, open the `usb_driver` folder, select **`android_winusb.inf`**, and click **OK**.
-   3. Choose **Android ADB Interface** → **Next**. Click **Yes** on the warning.
-9. Unplug the phone, plug it back in, and **reload the web page**.
+   2. **Have Disk… → Browse**, select **`usb_driver\android_winusb.inf`**, and click **OK**.
+   3. Choose **Android ADB Interface** → **Next**, then click **Yes** on the warning.
+9. Unplug and replug the phone.
 
 **Alternative: Zadig.** Only use this if the Google driver didn't help.
 
-1. Download Zadig from <https://zadig.akeo.ie> and run it.
+1. Download and run Zadig from <https://zadig.akeo.ie>.
 2. Click **Options → List All Devices**.
-3. In the dropdown, select the entry for your phone's **ADB Interface**. Do **not** pick the MTP or file-transfer entry; changing that one breaks file transfer.
-4. Make sure the driver on the right is **WinUSB** and click **Replace Driver** (or **Install Driver**).
-5. Replug the phone and reload the page.
-
-Then continue with [Prepare your Android phone](#prepare-your-android-phone-once).
+3. Select your phone's **ADB Interface**. Do **not** pick the MTP or file-transfer entry.
+4. Make sure **WinUSB** is selected on the right and click **Replace Driver**.
+5. Replug the phone.
 
 ---
 
 ## Prepare your Android phone (once)
 
-These steps are the same for Mac and Windows users.
+The same for Mac and Windows users.
 
 ### 1. Turn on Developer options
 
 1. Open **Settings → About phone**.
-2. Tap **Build number** **7 times** until you see *"You are now a developer!"*. Enter your PIN if asked.
+2. Tap **Build number** **7 times** until you see *"You are now a developer!"*.
    - **Samsung:** Settings → About phone → **Software information** → Build number
-   - **Xiaomi / Redmi / POCO:** Settings → About phone → **MIUI version** or **OS version**
+   - **Xiaomi / Redmi / POCO:** Settings → About phone → tap **MIUI version** or **OS version**
    - **OnePlus / Oppo / Realme:** Settings → About device → **Version** → Build number
 
 ### 2. Turn on USB debugging
 
-1. Go back to **Settings → System → Developer options**. On some phones, *Developer options* is directly in Settings.
-2. Turn on **USB debugging** and confirm with **OK**.
-3. **Xiaomi / Redmi / POCO only:** also turn on **USB debugging (Security settings)**. Without it, the screen mirror is visible but taps don't work.
+1. Go to **Settings → System → Developer options**. On some phones it's directly in Settings.
+2. Turn on **USB debugging** and tap **OK**.
+3. **Xiaomi / Redmi / POCO only:** also turn on **Install via USB** and **USB debugging (Security settings)**. Without them the app can't be installed.
 
 ### 3. Plug in the cable
 
-Connect the phone to the computer. If the phone shows a *"Use USB for"* notification, either option is fine. If the phone isn't detected later, try switching it to **File transfer**.
+If the phone asks what to *"Use USB for"*, either option is fine. If the phone isn't detected, try **File transfer**.
 
 ---
 
-## Connect and use the app
+## Open the website on the phone
 
-1. Open **<http://localhost:3000>** in Chrome or Edge.
-2. Click **Connect phone**.
-3. A browser pop-up lists USB devices. Select your phone and click **Connect**.
-4. **Unlock the phone.** It shows *"Allow USB debugging?"*. Tick **Always allow from this computer** and tap **Allow**.
-5. The page now shows your phone's model and Android version.
+In the project folder, on Mac or Windows:
 
-Now you can:
+```bash
+npm run phone
+```
 
-- **Screen → Start mirroring:** the phone's screen appears in the page. Click to tap, drag to swipe, and use the **Back / Home / Recents** buttons. Click **Stop mirroring** to end it.
-- **Shell:** type a command and click **Run**. Some to try:
-  - `getprop ro.product.model`: phone model
-  - `pm list packages`: installed apps
-  - `dumpsys battery`: battery info
-- **Disconnect:** releases the phone.
+This starts the website and waits for the phone. If the website is already running with `npm run dev`, it uses that instead. You will see:
+
+```
+[phone] Nothing is running on port 3000, starting the website (next dev)…
+[phone] Waiting for an Android phone with USB debugging… (opens http://localhost:3000/ as an app).
+```
+
+Now plug in the phone:
+
+1. **Unlock the phone.** It asks *"Allow USB debugging?"*. Tick **Always allow from this computer** and tap **Allow**.
+2. **The first time**, the script installs the **Bean & Brew** app:
+   - Some phones ask *"Install via USB?"*. Tap **Install**.
+   - Google Play Protect may warn about an unknown app. Tap **More details → Install anyway**. The app is built from `android-app/` in this project.
+3. The app opens full screen with the café. The terminal shows:
+
+   ```
+   [phone] ✅ Pixel 7 is showing http://localhost:3000/
+   ```
+
+4. Order something on the phone. The order appears in the terminal:
+
+   ```
+   🧾 Order #1: 2× Cappuccino, 1× Butter Croissant ($10.20)
+   ```
+
+**What happens when…**
+
+| You… | Result |
+| --- | --- |
+| unplug the cable | The app shows *"Waiting for the computer…"* |
+| plug it back in | The script reconnects and the app reloads the site by itself |
+| tap the app icon on the phone later | It opens the café if `npm run phone` is running and the cable is in, otherwise it waits |
+| press **Ctrl + C** in the terminal | Everything stops |
+
+**Other options:**
+
+- `npm run phone:browser` opens the site in the phone's normal browser instead of the app.
+- Use a different port. On Mac: `PORT=4000 npm run phone`. On Windows: `set PORT=4000 && npm run phone`.
+- For the production version, run `npm run build`, then `npm start` in one terminal and `npm run phone` in another.
+
+---
+
+## Change the website
+
+The café is a normal Next.js app:
+
+| File | What it is |
+| --- | --- |
+| `src/lib/menu.ts` | Café name, menu items, prices, currency |
+| `src/components/cafe/CafeApp.tsx` | The screens: menu, cart, order confirmation |
+| `src/components/cafe/CafeApp.module.css` | Colours and layout |
+| `src/app/api/orders/route.ts` | Receives orders and prints them in the terminal |
+
+Save a file and the phone updates within a second while `npm run phone` is running.
+
+---
+
+## Change the Android app (name, icon, colours)
+
+**You don't need this to use the project.** A ready-made `android-app/cafe.apk` is included. Only rebuild it if you want a different app name, icon or colours.
+
+| File | What it is |
+| --- | --- |
+| `android-app/res/values/values.xml` | App name, *"Waiting…"* text, colours |
+| `android-app/res/drawable/ic_launcher_foreground.xml` | App icon (coffee cup) |
+| `android-app/src/com/example/cafe/MainActivity.java` | The full-screen WebView |
+| `android-app/AndroidManifest.xml` | Package name and **versionCode** |
+
+To rebuild, use macOS or Linux. On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install), because the script needs `bash` and `zip`.
+
+1. Install **JDK 17** (<https://adoptium.net>) and **Android Studio**. Then open **Settings → Languages & Frameworks → Android SDK** and install **SDK Platform 34** and, under SDK Tools, **Build-Tools 34.0.0**.
+2. Bump `android:versionCode` in `android-app/AndroidManifest.xml`, for example from `1` to `2`, so `npm run phone` knows to update the app.
+3. Run:
+
+   ```bash
+   export ANDROID_HOME=~/Library/Android/sdk   # macOS default; on Linux usually ~/Android/Sdk
+   ./android-app/build.sh
+   ```
+
+4. Run `npm run phone`. It installs the new version automatically.
+
+---
+
+## Bonus: screen mirroring in the browser
+
+Open **<http://localhost:3000/bridge>** in **Chrome or Edge** (not Safari or Firefox) to connect the phone from the browser and see device info, run shell commands, or mirror and control its screen.
+
+> Only one program can use the phone's USB connection at a time. **Stop `npm run phone` (Ctrl + C) before using `/bridge`**, and the other way round.
 
 ---
 
@@ -277,45 +328,40 @@ Now you can:
 
 | Problem | Fix |
 | --- | --- |
-| *"This browser has no WebUSB"* | Use Chrome or Edge. Safari and Firefox are not supported. |
-| *"WebUSB only works on https:// or http://localhost"* | Open `http://localhost:3000`, not an IP address like `http://192.168.x.x:3000`. |
-| The phone isn't in the browser's device list | Check that **USB debugging** is on and the phone is unlocked. Try another cable, since many are charge-only, or another USB port. Switch the phone's USB mode to **File transfer**. On **Windows**, do [Step 8](#step-8-usb-driver-only-if-the-phone-doesnt-appear). |
-| *"The phone is being used by another program"* | Only one program can use the phone at a time. Run `adb kill-server` if you have ADB installed, and close **Android Studio**, **scrcpy**, **Vysor**, and any other tab with this app open. On Windows, also end **adb.exe** in Task Manager. |
-| *"Access denied"* (Windows) | The ADB interface isn't using WinUSB. See [Step 8](#step-8-usb-driver-only-if-the-phone-doesnt-appear). |
-| Stuck on *"Unlock your phone and tap “Allow”…"* | Unlock the phone and look for the dialog. If it doesn't appear, unplug the phone, go to Developer options → **Revoke USB debugging authorizations**, plug it back in, and connect again. |
-| Mirror shows but taps don't work (Xiaomi) | Turn on **USB debugging (Security settings)** in Developer options. |
-| *"public/scrcpy-server.bin is missing"* | Run `npm install` again while connected to the internet. |
-| `npm` errors in PowerShell on Windows | Use Command Prompt, or run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. |
-| `node` is not recognized | Close and reopen the terminal after installing Node.js. Restart the computer if needed. |
-
----
-
-## Deploying online
-
-WebUSB needs a secure page: **`https://`** or **`http://localhost`**. A site deployed with HTTPS, for example on Vercel, works. People open it in Chrome or Edge and connect their own phone to their own computer.
-
-The USB connection always runs **in the browser** of the computer the phone is plugged into. The Next.js server never touches USB.
+| Stuck on *"Waiting for an Android phone…"* | Check that **USB debugging** is on and the phone is unlocked. Try another cable, since many are charge-only, or another USB port. Switch USB mode to **File transfer**. On **Windows**, do [Step 6](#step-6-usb-driver-only-if-the-phone-isnt-found). |
+| *"Can't open the phone over USB"* | Another program is using the phone. Run `adb kill-server` if you have ADB, and close **Android Studio**, **scrcpy**, **Vysor** and the **/bridge** page. On Windows also end **adb.exe** in Task Manager, and check [Step 6](#step-6-usb-driver-only-if-the-phone-isnt-found). |
+| Stuck after *"tap Allow"* | Unlock the phone and look for the dialog. If it never appears: Developer options → **Revoke USB debugging authorizations**, then replug. |
+| `INSTALL_FAILED_USER_RESTRICTED` | Xiaomi: turn on **Install via USB** in Developer options. Other phones: tap **Install** on the phone's prompt. |
+| Play Protect blocks the app | Tap **More details → Install anyway**. |
+| App shows *"Waiting for the computer…"* | Make sure the cable is plugged in and `npm run phone` is running. The app retries every 2 seconds. |
+| The phone opens the browser instead of the app | You ran `npm run phone:browser`. Use `npm run phone`. |
+| `npm` errors in PowerShell | Use Command Prompt, or run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. |
+| `node` is not recognized | Reopen the terminal after installing Node.js, and restart if needed. |
+| Port 3000 is already used | Run on another port: `PORT=4000 npm run phone` (Mac) or `set PORT=4000 && npm run phone` (Windows). |
 
 ---
 
 ## How it works
 
-| File | Purpose |
+1. **`scripts/phone.mjs`** (`npm run phone`) talks to the phone over USB with the ADB protocol, using [Tango ADB](https://github.com/yume-chan/ya-webadb) and the [`usb`](https://github.com/node-usb/node-usb) package, so Google's `adb` isn't needed. The first time, the phone asks you to trust this computer. The key is stored in `~/.android-usb-bridge/adbkey`, and an existing `~/.android/adbkey` from Google ADB is also accepted.
+2. It sets up a **reverse tunnel**: when an app on the phone opens `localhost:3000`, the connection travels through the cable to `localhost:3000` on the computer. This is what `adb reverse tcp:3000 tcp:3000` does.
+3. It installs **`android-app/cafe.apk`** if it's missing or older than `android:versionCode` in the manifest. The APK is a 17 KB app with one full-screen WebView.
+4. It starts the app with the URL to open. The app keeps retrying while the computer can't be reached.
+
+| Folder / file | Purpose |
 | --- | --- |
-| `src/lib/adb.ts` | WebUSB device picker → ADB handshake (RSA key kept in IndexedDB) → shell commands |
-| `src/lib/scrcpy.ts` | Pushes `public/scrcpy-server.bin` to the phone, starts it, decodes H.264 video with WebCodecs into a `<canvas>`, and sends touch and key events back |
-| `src/components/AndroidUsbBridge.tsx` | The user interface |
-| `src/components/AndroidUsbBridgeClient.tsx` | Loads the UI with `ssr: false`, because WebUSB only exists in the browser |
-| `scripts/copy-scrcpy-server.mjs` | Runs after `npm install` and copies the downloaded scrcpy server into `public/` |
-
-It is built on [Tango ADB](https://github.com/yume-chan/ya-webadb) (the `@yume-chan/*` packages) and [scrcpy](https://github.com/Genymobile/scrcpy).
-
-The scrcpy server version (`3.3.3`) is set in the `postinstall` script in `package.json`, and it must be a version that `@yume-chan/scrcpy` supports. To upgrade, change it there and update all `@yume-chan/*` packages together.
+| `src/app/page.tsx`, `src/components/cafe/` | The café website |
+| `src/app/api/orders/route.ts` | Order API (prints orders on the computer) |
+| `scripts/phone.mjs` | USB watcher, reverse tunnel, app install and launch |
+| `android-app/` | Source of the Android shell app, plus the prebuilt `cafe.apk` |
+| `src/app/bridge/`, `src/lib/adb.ts`, `src/lib/scrcpy.ts` | Bonus browser tool: WebUSB connection, shell, screen mirroring |
+| `scripts/copy-scrcpy-server.mjs` | Copies the scrcpy server into `public/` after `npm install` (for `/bridge`) |
 
 ---
 
 ## Limitations
 
-- **Android only.** iPhones don't support ADB, and iOS has no equivalent browser API.
-- **Chromium browsers only** (Chrome, Edge, Opera, Brave). Safari and Firefox don't support WebUSB.
-- **No audio** forwarding. scrcpy supports it, but this demo turns it off to stay simple.
+- **Android only.** iPhones don't allow this kind of USB access.
+- **The phone must stay plugged in.** The website is served from your computer, so the app can't show the site without the cable and `npm run phone`.
+- **Not for the Play Store as-is.** For an app that works without the computer, host the site online and point the app at that URL, for example with [Capacitor](https://capacitorjs.com).
+- `npm run phone` and the `/bridge` page can't use the phone at the same time.

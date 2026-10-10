@@ -62,7 +62,7 @@
   font-size: 0.9rem;
 }
 
-.primary {
+.main .primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
@@ -99,4 +99,23 @@
 
 .screen[hidden] {
   display: none;
+}
+
+.main button,
+.main input {
+  font: inherit;
+  color: inherit;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.main button {
+  cursor: pointer;
+}
+
+.main button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

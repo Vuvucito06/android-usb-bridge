@@ -1,5 +1,5 @@
-import AndroidUsbBridge from "@/components/AndroidUsbBridgeClient";
+import CafeApp from "@/components/cafe/CafeApp";
 
 export default function Home() {
-  return <AndroidUsbBridge />;
+  return <CafeApp />;
 }
