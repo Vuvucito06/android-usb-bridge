@@ -16,7 +16,7 @@ import {
   findUsbInterface,
 } from "@yume-chan/adb-daemon-webusb";
 import { PackageManager } from "@yume-chan/android-bin";
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createPrivateKey, generateKeyPairSync } from "node:crypto";
 import { once } from "node:events";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -26,6 +26,7 @@ import { homedir, hostname, userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import { Duplex } from "node:stream";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { usb } from "usb";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -140,6 +141,64 @@ async function openOnPhone(adb) {
   if (output.includes("Error")) throw new Error(output.trim());
 }
 
+const hex = (value, length) => value.toString(16).toUpperCase().padStart(length, "0");
+
+/**
+ * Windows only: asks Plug and Play which driver the phone's ADB interface
+ * uses. Programs that talk to USB directly (this script, Chrome) need WinUSB.
+ */
+async function findWindowsAdbDriver(device) {
+  const { vendorId, productId } = device.raw;
+  const adbInterface = findUsbInterface(device.raw, AdbDefaultInterfaceFilter);
+  const deviceId = `USB\\VID_${hex(vendorId, 4)}&PID_${hex(productId, 4)}`;
+  const interfaceId = `${deviceId}&MI_${hex(adbInterface.interface_.interfaceNumber, 2)}`;
+  // Composite phones (MTP + ADB) have one node per interface; ADB-only phones have one node.
+  const script = `
+    $d = Get-PnpDevice -PresentOnly | Where-Object InstanceId -like '${interfaceId}\\*' | Select-Object -First 1
+    if (-not $d) { $d = Get-PnpDevice -PresentOnly | Where-Object InstanceId -like '${deviceId}\\*' | Select-Object -First 1 }
+    if ($d) {
+      $keys = 'DEVPKEY_Device_Service', 'DEVPKEY_Device_DriverProvider', 'DEVPKEY_Device_DriverInfPath'
+      $values = $keys | ForEach-Object { (Get-PnpDeviceProperty -InstanceId $d.InstanceId -KeyName $_).Data }
+      (@($d.InstanceId, $d.FriendlyName) + $values) -join '|'
+    }`;
+  const { stdout } = await promisify(execFile)(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-EncodedCommand", Buffer.from(script, "utf16le").toString("base64")],
+    { timeout: 15_000 },
+  );
+  const [instanceId = "", name, service, provider, inf] = stdout.trim().split("|");
+  // Zadig shows "VID PID MI" for an interface of a composite device, "VID PID" otherwise.
+  let zadigUsbId = `${hex(vendorId, 4)} ${hex(productId, 4)}`;
+  if (instanceId.includes("&MI_")) zadigUsbId += ` ${hex(adbInterface.interface_.interfaceNumber, 2)}`;
+  return { name, service, provider, inf, zadigUsbId };
+}
+
+async function explainUsbError(device, error) {
+  const reason = `Can't open the phone over USB (${error.message}).`;
+
+  if (process.platform === "win32" && /driver|winusb/i.test(error.message)) {
+    const driver = await findWindowsAdbDriver(device).catch(() => undefined);
+    const current = driver?.service
+      ? `Right now Windows uses the "${driver.service}" driver` +
+        (driver.provider ? ` from ${driver.provider}` : "") +
+        (driver.inf ? ` (${driver.inf})` : "") +
+        ` for "${driver.name}".`
+      : "Right now Windows uses a different driver.";
+    return [
+      reason,
+      `The phone's ADB interface must use the WinUSB driver. ${current}`,
+      "Fix: open Zadig (https://zadig.akeo.ie) → Options → List All Devices → pick the entry with " +
+        `USB ID ${driver?.zadigUsbId ?? "of your phone's ADB Interface"} → choose WinUSB → Replace Driver, ` +
+        "then unplug and replug the phone. Details: README → Install on Windows → Step 6.",
+    ].join("\n          ");
+  }
+
+  return (
+    `${reason} Close other programs using it (run \`adb kill-server\`, close ` +
+    "Android Studio, scrcpy or the /bridge page)."
+  );
+}
+
 const activeSerials = new Set();
 
 async function handlePhone(device) {
@@ -152,11 +211,7 @@ async function handlePhone(device) {
     try {
       connection = await device.connect();
     } catch (error) {
-      throw new Error(
-        `Can't open the phone over USB (${error.message}). Close other programs ` +
-          "using it (run `adb kill-server`, close Android Studio, scrcpy or the " +
-          "/bridge page). On Windows, the phone may need the WinUSB driver (see README).",
-      );
+      throw new Error(await explainUsbError(device, error));
     }
 
     log("Connecting… if the phone asks “Allow USB debugging?”, tap Allow.");

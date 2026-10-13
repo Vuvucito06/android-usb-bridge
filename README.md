@@ -176,6 +176,13 @@ Programs on Windows can only talk to the phone if its **ADB interface uses the W
 
 Come back here **only if** the terminal keeps saying *"Waiting for an Android phone…"* while the phone is plugged in, or shows *"Can't open the phone over USB"*. This is most common with Samsung phones and PCs that have an OEM driver installed.
 
+**If the error says *"incompatible driver is installed for this interface"*:** Windows has put a different driver (not WinUSB) on the phone's ADB interface. `npm run phone` prints which driver it is and the **USB ID** to pick in Zadig. Go straight to **Zadig** below. This can start happening on a PC where everything used to work, when:
+
+- a phone tool or driver pack is installed, for example Xiaomi Mi PC Suite or MiFlash, Samsung drivers, a "Universal ADB driver" or an ADB installer;
+- Zadig was used earlier with **libusbK** or **libusb-win32** selected instead of **WinUSB**;
+- Windows Update swaps the driver;
+- the phone's **USB mode** changes (File transfer / PTP / charging only). Windows treats each mode as a separate device, so switch back to the mode that worked, or fix the driver in each mode.
+
 **Install the Google USB Driver:**
 
 1. Download it from <https://developer.android.com/studio/run/win-usb>. Accept the license and download the ZIP.
@@ -191,13 +198,13 @@ Come back here **only if** the terminal keeps saying *"Waiting for an Android ph
    3. Choose **Android ADB Interface** → **Next**, then click **Yes** on the warning.
 9. Unplug and replug the phone.
 
-**Alternative: Zadig.** Only use this if the Google driver didn't help.
+**Zadig.** Use this for *"incompatible driver"*, or if the Google driver didn't help.
 
 1. Download and run Zadig from <https://zadig.akeo.ie>.
 2. Click **Options → List All Devices**.
-3. Select your phone's **ADB Interface**. Do **not** pick the MTP or file-transfer entry.
-4. Make sure **WinUSB** is selected on the right and click **Replace Driver**.
-5. Replug the phone.
+3. In the dropdown, pick the entry whose **USB ID** matches the one `npm run phone` printed, for example `2717 FF48 01`. That is the phone's **ADB Interface**. Do **not** pick the MTP or file-transfer entry, which has a different last number.
+4. The box left of the arrow shows the current driver. In the box on the right, choose **WinUSB** and click **Replace Driver**.
+5. Unplug and replug the phone, then run `npm run phone` again.
 
 ---
 
@@ -329,6 +336,7 @@ Open **<http://localhost:3000/bridge>** in **Chrome or Edge** (not Safari or Fir
 | Problem | Fix |
 | --- | --- |
 | Stuck on *"Waiting for an Android phone…"* | Check that **USB debugging** is on and the phone is unlocked. Try another cable, since many are charge-only, or another USB port. Switch USB mode to **File transfer**. On **Windows**, do [Step 6](#step-6-usb-driver-only-if-the-phone-isnt-found). |
+| *"incompatible driver is installed for this interface"* (Windows) | The phone's ADB interface isn't using WinUSB. Use **Zadig** with the USB ID that `npm run phone` prints. See [Step 6](#step-6-usb-driver-only-if-the-phone-isnt-found). |
 | *"Can't open the phone over USB"* | Another program is using the phone. Run `adb kill-server` if you have ADB, and close **Android Studio**, **scrcpy**, **Vysor** and the **/bridge** page. On Windows also end **adb.exe** in Task Manager, and check [Step 6](#step-6-usb-driver-only-if-the-phone-isnt-found). |
 | Stuck after *"tap Allow"* | Unlock the phone and look for the dialog. If it never appears: Developer options → **Revoke USB debugging authorizations**, then replug. |
 | `INSTALL_FAILED_USER_RESTRICTED` | Xiaomi: turn on **Install via USB** in Developer options. Other phones: tap **Install** on the phone's prompt. |
